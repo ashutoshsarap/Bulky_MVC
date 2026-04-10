@@ -1,8 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Bulky.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 namespace Bulky.DataAccess.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext
     {
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
@@ -12,12 +13,27 @@ namespace Bulky.DataAccess.Data
 
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<Company> Companies { get; set; }
+        public DbSet<ApplicationUser> ApplicationUsers { get; set; }
+        public DbSet<ShoppingCart> ShoppingCarts { get; set; }
+        public DbSet<OrderHeader> OrderHeaders { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<Category>().HasData(
                 new Category { Id = 1, Name = "Action", DisplayOrder = 1 },
                 new Category { Id = 2, Name = "SciFi", DisplayOrder = 2 },
                 new Category { Id = 3, Name = "History", DisplayOrder = 3 }
+            );
+
+            modelBuilder.Entity<Company>().HasData(
+                new Company { Id = 1, Name = "KPMG", StreetAddress="st 21", City="LA", PostalCode="1234", State="USA", PhoneNumber="892121298" },
+                new Company { Id = 2, Name = "Casio", StreetAddress = "reina 11", City = "Lv", PostalCode = "5654", State = 
+                "Texas", PhoneNumber = "67676767677" },
+                new Company { Id = 3, Name = "Bovet", StreetAddress = "el 43", City = "Eldia", PostalCode = "3000", State = "Marley", PhoneNumber = "12121212222" }
             );
 
             modelBuilder.Entity<Product>().HasData(
@@ -106,6 +122,8 @@ namespace Bulky.DataAccess.Data
                     ImageUrl = ""
                 }
                 );
+
+            
         }
 
 

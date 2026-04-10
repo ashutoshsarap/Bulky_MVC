@@ -1,11 +1,14 @@
 using System.Diagnostics;
+using System.Security.Claims;
 using Bulky.DataAccess.Repository.IRepository;
 using Bulky.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyWeb.Areas.Customer.Controllers
 {
     [Area("Customer")]
+
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -18,14 +21,56 @@ namespace BulkyWeb.Areas.Customer.Controllers
 
         public IActionResult Index()
         {
-            IEnumerable<Product> productList = _unitOfWork.Product.GetAll(includeProperties: "Category");
+            IEnumerable<Product> productList = _unitOfWork.Product.GetAll(null,includeProperties: "Category");
             return View(productList);
         }
 
         public IActionResult Details(int id)
         {
-            Product product = _unitOfWork.Product.Get(u => u.Id==id,includeProperties: "Category");
-            return View(product);
+            ShoppingCart shoppingCart = new ShoppingCart()
+            {
+                Product = _unitOfWork.Product.Get(u => u.Id == id, includeProperties: "Category"),
+                Count = 1,
+                ProductId = id
+            };
+            return View(shoppingCart);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public IActionResult Details(ShoppingCart shoppingCart)
+        {
+            shoppingCart.Id = 0;
+            var claimsIdentity = (ClaimsIdentity?)User.Identity;
+            var userId = claimsIdentity?.FindFirst(ClaimTypes.NameIdentifier).Value;
+            shoppingCart.ApplicationUserId = userId;
+
+            var cartFromDb = _unitOfWork.ShoppingCart.Get(u => u.ApplicationUserId == userId && u.ProductId == shoppingCart.ProductId,"");
+
+            if (cartFromDb != null)
+            {
+                cartFromDb.Count += shoppingCart.Count;
+                _unitOfWork.ShoppingCart.Update(cartFromDb);
+            }
+            else
+            {
+                _unitOfWork.ShoppingCart.Add(shoppingCart);
+            }
+            TempData["success"] = "Cart updated successfully";
+            _unitOfWork.Save();
+
+            //if (claimsIdentity != null)
+            //{
+            //    var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            //    // Add your shopping cart logic here
+            //}
+
+            //// Populate the Product before returning to the view to avoid NullReferenceException
+            //shoppingCart.Product = _unitOfWork.Product.Get(u => u.Id == shoppingCart.ProductId, includeProperties: "Category");
+
+            //using nameof() to avoid hardcoding the action name as a string
+            // This is a common practice to prevent errors when renaming actions, as it will automatically update the reference if the action name changes.
+            return RedirectToAction(nameof(Index));
         }
 
         public IActionResult Privacy()
